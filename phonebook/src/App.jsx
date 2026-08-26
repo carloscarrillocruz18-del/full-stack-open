@@ -1,40 +1,84 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import personService from './services/persons'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas', number: '040-123456', id: 1 },
-    { name: 'Ada Lovelace', number: '39-44-5323523', id: 2 },
-    { name: 'Dan Abramov', number: '12-43-234345', id: 3 },
-    { name: 'Mary Poppendieck', number: '39-23-6423122', id: 4 }
-  ])
+  const [persons, setPersons] = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [searchFilter, setSearchFilter] = useState('')
 
+  // Cargar datos iniciales del servidor (Tarea 2.11)
+  useEffect(() => {
+    personService
+      .getAll()
+      .then(initialPersons => {
+        setPersons(initialPersons)
+      })
+  }, [])
+
+  // Añadir o actualizar persona (Tareas 2.12 y 2.15)
   const addPerson = (event) => {
     event.preventDefault()
 
-    const nameExists = persons.some(
+    const existingPerson = persons.find(
       person => person.name.toLowerCase() === newName.trim().toLowerCase()
     )
 
-    if (nameExists) {
-      alert(`${newName} is already added to phonebook`)
+    if (existingPerson) {
+      // Tarea 2.15: Si la persona ya existe, preguntar si desea actualizar el número
+      const confirmUpdate = window.confirm(
+        `${newName} is already added to phonebook, replace the old number with a new one?`
+      )
+
+      if (confirmUpdate) {
+        const changedPerson = { ...existingPerson, number: newNumber }
+
+        personService
+          .update(existingPerson.id, changedPerson)
+          .then(returnedPerson => {
+            setPersons(persons.map(p => p.id !== existingPerson.id ? p : returnedPerson))
+            setNewName('')
+            setNewNumber('')
+          })
+          .catch(error => {
+            alert(`Information of ${existingPerson.name} has already been removed from server`)
+            setPersons(persons.filter(p => p.id !== existingPerson.id))
+          })
+      }
       return
     }
 
     const personObject = {
       name: newName,
       number: newNumber,
-      id: persons.length + 1
     }
 
-    setPersons(persons.concat(personObject))
-    setNewName('')
-    setNewNumber('')
+    // Tarea 2.12: Guardar en el servidor mediante POST
+    personService
+      .create(personObject)
+      .then(returnedPerson => {
+        setPersons(persons.concat(returnedPerson))
+        setNewName('')
+        setNewNumber('')
+      })
+  }
+
+  // Tarea 2.14: Eliminar un contacto del servidor
+  const handleDelete = (id, name) => {
+    if (window.confirm(`Delete ${name} ?`)) {
+      personService
+        .remove(id)
+        .then(() => {
+          setPersons(persons.filter(person => person.id !== id))
+        })
+        .catch(error => {
+          alert(`The person '${name}' was already deleted from server`)
+          setPersons(persons.filter(person => person.id !== id))
+        })
+    }
   }
 
   const handleNameChange = (event) => {
@@ -67,7 +111,7 @@ const App = () => {
 
       <h3>Numbers</h3>
 
-      <Persons persons={persons} searchFilter={searchFilter} />
+      <Persons persons={persons} searchFilter={searchFilter} handleDelete={handleDelete} />
     </div>
   )
 }
