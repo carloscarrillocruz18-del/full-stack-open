@@ -3,14 +3,24 @@ import personService from './services/persons'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
+import Notification from './components/Notification'
 
 const App = () => {
   const [persons, setPersons] = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [searchFilter, setSearchFilter] = useState('')
+  const [notificationMessage, setNotificationMessage] = useState(null)
+  const [notificationType, setNotificationType] = useState('success')
 
-  // Cargar datos iniciales del servidor (Tarea 2.11)
+  const showNotification = (message, type = 'success') => {
+    setNotificationMessage(message)
+    setNotificationType(type)
+    setTimeout(() => {
+      setNotificationMessage(null)
+    }, 5000)
+  }
+
   useEffect(() => {
     personService
       .getAll()
@@ -19,7 +29,6 @@ const App = () => {
       })
   }, [])
 
-  // Añadir o actualizar persona (Tareas 2.12 y 2.15)
   const addPerson = (event) => {
     event.preventDefault()
 
@@ -28,7 +37,6 @@ const App = () => {
     )
 
     if (existingPerson) {
-      // Tarea 2.15: Si la persona ya existe, preguntar si desea actualizar el número
       const confirmUpdate = window.confirm(
         `${newName} is already added to phonebook, replace the old number with a new one?`
       )
@@ -40,11 +48,16 @@ const App = () => {
           .update(existingPerson.id, changedPerson)
           .then(returnedPerson => {
             setPersons(persons.map(p => p.id !== existingPerson.id ? p : returnedPerson))
+            showNotification(`Updated number for ${returnedPerson.name}`)
             setNewName('')
             setNewNumber('')
           })
           .catch(error => {
-            alert(`Information of ${existingPerson.name} has already been removed from server`)
+            // Tarea 2.17: Manejo de error si ya fue eliminado en otro lado
+            showNotification(
+              `Information of ${existingPerson.name} has already been removed from server`,
+              'error'
+            )
             setPersons(persons.filter(p => p.id !== existingPerson.id))
           })
       }
@@ -56,26 +69,29 @@ const App = () => {
       number: newNumber,
     }
 
-    // Tarea 2.12: Guardar en el servidor mediante POST
     personService
       .create(personObject)
       .then(returnedPerson => {
         setPersons(persons.concat(returnedPerson))
+        showNotification(`Added ${returnedPerson.name}`)
         setNewName('')
         setNewNumber('')
       })
   }
 
-  // Tarea 2.14: Eliminar un contacto del servidor
   const handleDelete = (id, name) => {
     if (window.confirm(`Delete ${name} ?`)) {
       personService
         .remove(id)
         .then(() => {
           setPersons(persons.filter(person => person.id !== id))
+          showNotification(`Deleted ${name}`)
         })
         .catch(error => {
-          alert(`The person '${name}' was already deleted from server`)
+          showNotification(
+            `Information of ${name} has already been removed from server`,
+            'error'
+          )
           setPersons(persons.filter(person => person.id !== id))
         })
     }
@@ -96,6 +112,8 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+
+      <Notification message={notificationMessage} type={notificationType} />
 
       <Filter searchFilter={searchFilter} handleFilterChange={handleFilterChange} />
 
