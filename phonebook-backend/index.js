@@ -47,10 +47,10 @@ app.get('/api/persons/:id', (req, res, next) => {
     .catch(error => next(error))
 })
 
-// Eliminar una persona (Tarea 3.15)
+// Eliminar una persona (Tarea 3.15) - Corregido para ESLint
 app.delete('/api/persons/:id', (req, res, next) => {
   Person.findByIdAndDelete(req.params.id)
-    .then(result => {
+    .then(() => {
       res.status(204).end()
     })
     .catch(error => next(error))

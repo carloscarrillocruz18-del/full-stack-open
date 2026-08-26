@@ -35,7 +35,7 @@ if (process.argv.length === 5) {
     console.log(`added ${name} number ${number} to phonebook`)
     mongoose.connection.close()
   })
-} 
+}
 // CASO 2: Si solo se pasa la contraseña (3 argumentos), se listan todos los registros
 else if (process.argv.length === 3) {
   Person.find({}).then(persons => {
