@@ -1,7 +1,16 @@
 const express = require('express')
+const morgan = require('morgan') // Tarea 3.7: Importar morgan
 const app = express()
 
 app.use(express.json())
+
+// Tarea 3.8: Crear un token personalizado de morgan llamado 'body' para mostrar los datos de los POST
+morgan.token('body', (req) => {
+  return req.method === 'POST' ? JSON.stringify(req.body) : ''
+})
+
+// Tarea 3.7 y 3.8: Configurar morgan con el formato 'tiny' más el token del body personalizado
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
 let persons = [
   { 
@@ -26,12 +35,10 @@ let persons = [
   }
 ]
 
-// Tarea 3.1: Obtener todos los contactos
 app.get('/api/persons', (req, res) => {
   res.json(persons)
 })
 
-// Tarea 3.2: Información sobre la cantidad de contactos y fecha actual
 app.get('/info', (req, res) => {
   const count = persons.length
   const currentDate = new Date()
@@ -41,7 +48,6 @@ app.get('/info', (req, res) => {
   `)
 })
 
-// Tarea 3.3: Obtener un solo contacto por ID
 app.get('/api/persons/:id', (req, res) => {
   const id = req.params.id
   const person = persons.find(p => p.id === id)
@@ -53,7 +59,6 @@ app.get('/api/persons/:id', (req, res) => {
   }
 })
 
-// Tarea 3.4: Eliminar un contacto
 app.delete('/api/persons/:id', (req, res) => {
   const id = req.params.id
   persons = persons.filter(p => p.id !== id)
@@ -61,12 +66,10 @@ app.delete('/api/persons/:id', (req, res) => {
   res.status(204).end()
 })
 
-// Función auxiliar para IDs aleatorios (Tarea 3.5)
 const generateId = () => {
   return Math.floor(Math.random() * 1000000).toString()
 }
 
-// Tarea 3.5 y 3.6: Agregar contacto con validaciones
 app.post('/api/persons', (req, res) => {
   const body = req.body
 
