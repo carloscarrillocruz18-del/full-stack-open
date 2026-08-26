@@ -1,5 +1,8 @@
 import axios from 'axios'
-const baseUrl = 'http://localhost:3001/persons'
+
+// Usamos ruta relativa para que funcione tanto en desarrollo (con el proxy de Vite) 
+// como en producción cuando el backend sirva la carpeta dist
+const baseUrl = '/api/persons'
 
 const getAll = () => {
   const request = axios.get(baseUrl)

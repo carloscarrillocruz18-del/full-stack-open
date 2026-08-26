@@ -1,8 +1,11 @@
 const express = require('express')
 const morgan = require('morgan') // Tarea 3.7: Importar morgan
+const cors = require('cors') // Tarea 3.9: Importar cors para permitir peticiones del frontend
 const app = express()
 
 app.use(express.json())
+app.use(cors()) // Tarea 3.9: Habilitar cors en todas las rutas
+app.use(express.static('dist')) // Tarea 3.11: Servir archivos estáticos del frontend (carpeta dist)
 
 // Tarea 3.8: Crear un token personalizado de morgan llamado 'body' para mostrar los datos de los POST
 morgan.token('body', (req) => {
@@ -95,7 +98,8 @@ app.post('/api/persons', (req, res) => {
   res.json(person)
 })
 
-const PORT = 3001
+// Tarea 3.10: Puerto dinámico para producción (Render / Fly.io) o 3001 local
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
