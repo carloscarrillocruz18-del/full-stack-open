@@ -48,7 +48,7 @@ app.get('/api/persons/:id', (req, res, next) => {
     .catch(error => next(error))
 })
 
-// Eliminar una persona de la base de datos
+// Eliminar una persona de la base de datos (Tarea 3.15)
 app.delete('/api/persons/:id', (req, res, next) => {
   Person.findByIdAndDelete(req.params.id)
     .then(result => {
@@ -88,6 +88,20 @@ app.post('/api/persons', (req, res, next) => {
     })
     .catch(error => next(error))
 })
+
+// Tarea 3.16: Manejador de errores para ID no válido (CastError u otros)
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  }
+
+  next(error)
+}
+
+// Este debe ser el último middleware cargado
+app.use(errorHandler)
 
 // Puerto dinámico
 const PORT = process.env.PORT || 3001
