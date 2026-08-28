@@ -61,7 +61,7 @@ const App = () => {
       setUsername('')
       setPassword('')
       notify(`Bienvenido de nuevo, ${user.name || user.username}`)
-    } catch (exception) {
+    } catch {
       notify('wrong username or password', 'error')
     }
   }
@@ -79,8 +79,7 @@ const App = () => {
       const createdBlog = await blogService.create(newBlogObject)
       setBlogs(blogs.concat(createdBlog))
       notify(`a new blog ${createdBlog.title} by ${createdBlog.author} added`)
-    } catch (exception) {
-      console.log('Error detallado al crear:', exception.response?.data || exception.message)
+    } catch {
       notify('Error al crear el blog', 'error')
     }
   }
@@ -100,8 +99,8 @@ const App = () => {
         user: blogToLike.user
       }
       setBlogs(blogs.map(blog => blog.id === id ? blogWithUser : blog))
-    } catch (error) {
-      console.error(error)
+    } catch {
+      // Manejo de error silencioso
     }
   }
 
@@ -111,13 +110,12 @@ const App = () => {
         await blogService.remove(id)
         setBlogs(blogs.filter(b => b.id !== id))
         notify(`Se ha eliminado el blog ${title}`)
-      } catch (error) {
+      } catch {
         notify('No tienes permiso para eliminar este blog', 'error')
       }
     }
   }
 
-  // Ordenar los blogs por número de "likes" de mayor a menor
   const sortedBlogs = [...blogs].sort((a, b) => b.likes - a.likes)
 
   if (user === null) {
@@ -128,7 +126,7 @@ const App = () => {
         <form onSubmit={handleLogin}>
           <div>
             username
-              <input
+            <input
               type="text"
               value={username}
               name="Username"
@@ -137,7 +135,7 @@ const App = () => {
           </div>
           <div>
             password
-              <input
+            <input
               type="password"
               value={password}
               name="Password"
@@ -163,9 +161,9 @@ const App = () => {
       </Togglable>
 
       {sortedBlogs.map(blog =>
-        <Blog 
-          key={blog.id} 
-          blog={blog} 
+        <Blog
+          key={blog.id}
+          blog={blog}
           handleLike={() => handleLike(blog.id)}
           handleDelete={() => handleDelete(blog.id, blog.title, blog.author)}
           user={user}
