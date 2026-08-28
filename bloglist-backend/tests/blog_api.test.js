@@ -108,6 +108,38 @@ test('blog without title or url is bad request 400', async () => {
     .expect(400)
 })
 
+test('a blog can be deleted', async () => {
+  const blogsAtStart = await api.get('/api/blogs')
+  const blogToDelete = blogsAtStart.body[0]
+
+  await api
+    .delete(`/api/blogs/${blogToDelete.id}`)
+    .expect(204)
+
+  const blogsAtEnd = await api.get('/api/blogs')
+  assert.strictEqual(blogsAtEnd.body.length, initialBlogs.length - 1)
+
+  const titles = blogsAtEnd.body.map(r => r.title)
+  assert.strictEqual(titles.includes(blogToDelete.title), false)
+})
+
+test('a blog likes can be updated', async () => {
+  const blogsAtStart = await api.get('/api/blogs')
+  const blogToUpdate = blogsAtStart.body[0]
+
+  const updatedData = {
+    likes: blogToUpdate.likes + 10
+  }
+
+  const response = await api
+    .put(`/api/blogs/${blogToUpdate.id}`)
+    .send(updatedData)
+    .expect(200)
+    .expect('Content-Type', /application\/json/)
+
+  assert.strictEqual(response.body.likes, blogToUpdate.likes + 10)
+})
+
 after(async () => {
   await mongoose.connection.close()
 })
