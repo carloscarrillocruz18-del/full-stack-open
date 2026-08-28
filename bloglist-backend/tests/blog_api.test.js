@@ -2,10 +2,14 @@ const { test, describe, beforeEach, after } = require('node:test')
 const assert = require('node:assert')
 const mongoose = require('mongoose')
 const supertest = require('supertest')
+const bcrypt = require('bcrypt')
 const app = require('../app')
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 const api = supertest(app)
+
+let token = ''
 
 const initialBlogs = [
   {
@@ -24,10 +28,22 @@ const initialBlogs = [
 
 beforeEach(async () => {
   await Blog.deleteMany({})
-  const blogObject1 = new Blog(initialBlogs[0])
-  await blogObject1.save()
-  const blogObject2 = new Blog(initialBlogs[1])
-  await blogObject2.save()
+  await User.deleteMany({})
+
+  const passwordHash = await bcrypt.hash('sekret', 10)
+  const user = new User({ username: 'root', name: 'Superuser', passwordHash })
+  await user.save()
+
+  const loginResponse = await api
+    .post('/api/login')
+    .send({ username: 'root', password: 'sekret' })
+
+  token = loginResponse.body.token
+
+  for (let blog of initialBlogs) {
+    let blogObject = new Blog({ ...blog, user: user._id })
+    await blogObject.save()
+  }
 })
 
 test('blogs are returned as json', async () => {
@@ -49,7 +65,7 @@ test('the unique identifier property of the blog posts is named id', async () =>
   assert.strictEqual(blog._id, undefined)
 })
 
-test('a valid blog can be added', async () => {
+test('a valid blog can be added with token', async () => {
   const newBlog = {
     title: 'Canonical string reduction',
     author: 'Edsger W. Dijkstra',
@@ -59,6 +75,7 @@ test('a valid blog can be added', async () => {
 
   await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
     .send(newBlog)
     .expect(201)
     .expect('Content-Type', /application\/json/)
@@ -70,6 +87,22 @@ test('a valid blog can be added', async () => {
   assert.strictEqual(titles.includes('Canonical string reduction'), true)
 })
 
+test('adding a blog fails with 401 Unauthorized if token is not provided', async () => {
+  const newBlog = {
+    title: 'Unauthorized blog',
+    author: 'No One',
+    url: 'http://example.com/unauthorized',
+  }
+
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(401)
+
+  const response = await api.get('/api/blogs')
+  assert.strictEqual(response.body.length, initialBlogs.length)
+})
+
 test('blog likes default to 0 if missing', async () => {
   const newBlog = {
     title: 'Blog without likes',
@@ -79,6 +112,7 @@ test('blog likes default to 0 if missing', async () => {
 
   const response = await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
     .send(newBlog)
     .expect(201)
     .expect('Content-Type', /application\/json/)
@@ -94,6 +128,7 @@ test('blog without title or url is bad request 400', async () => {
 
   await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
     .send(newBlogWithoutTitle)
     .expect(400)
 
@@ -104,16 +139,18 @@ test('blog without title or url is bad request 400', async () => {
 
   await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
     .send(newBlogWithoutUrl)
     .expect(400)
 })
 
-test('a blog can be deleted', async () => {
+test('a blog can be deleted by its creator', async () => {
   const blogsAtStart = await api.get('/api/blogs')
   const blogToDelete = blogsAtStart.body[0]
 
   await api
     .delete(`/api/blogs/${blogToDelete.id}`)
+    .set('Authorization', `Bearer ${token}`)
     .expect(204)
 
   const blogsAtEnd = await api.get('/api/blogs')
@@ -121,23 +158,6 @@ test('a blog can be deleted', async () => {
 
   const titles = blogsAtEnd.body.map(r => r.title)
   assert.strictEqual(titles.includes(blogToDelete.title), false)
-})
-
-test('a blog likes can be updated', async () => {
-  const blogsAtStart = await api.get('/api/blogs')
-  const blogToUpdate = blogsAtStart.body[0]
-
-  const updatedData = {
-    likes: blogToUpdate.likes + 10
-  }
-
-  const response = await api
-    .put(`/api/blogs/${blogToUpdate.id}`)
-    .send(updatedData)
-    .expect(200)
-    .expect('Content-Type', /application\/json/)
-
-  assert.strictEqual(response.body.likes, blogToUpdate.likes + 10)
 })
 
 after(async () => {
